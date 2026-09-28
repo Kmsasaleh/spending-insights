@@ -5,14 +5,16 @@ from pathlib import Path
 import anthropic
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from postgrest.exceptions import APIError as DatabaseError
 from pydantic import BaseModel
 
 from app.amex_parser import parse_amex_csv
-from app.categorizer import categorize
+from app.db import list_transactions, save_transactions
 from app.models import Category
+from app.service import categorize_with_memory
 
-# Load .env from the project root (spending-insights/.env) when running locally.
-# On Render there's no .env file; keys come from the dashboard instead, and this does nothing.
+# Load .env from the project root when running locally.
+# On Render there's no .env file; keys come from the dashboard instead.
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 MAX_UPLOAD_BYTES = 1_000_000  # 1 MB is far more than a year of statements
@@ -28,12 +30,26 @@ class CategorizedTransaction(BaseModel):
     merchant: str | None
     category: Category | None
     confidence: float | None
+    source: str  # "memory" or "llm"
 
 
 class CategorizeResponse(BaseModel):
     transactions: list[CategorizedTransaction]
     parse_errors: list[str]
     uncategorized: int
+    sent_to_claude: int
+    from_memory: int
+
+
+class StoredTransaction(BaseModel):
+    id: int
+    posted_date: date
+    description: str
+    amount: Decimal
+    merchant: str | None
+    category: Category | None
+    confidence: float | None
+    source: str
 
 
 @app.get("/health")
@@ -44,7 +60,7 @@ def health():
 
 @app.post("/categorize", response_model=CategorizeResponse)
 def categorize_statement(file: UploadFile = File(...)):
-    """Upload an Amex CSV and get back every transaction with its category."""
+    """Upload an Amex CSV: categorize every transaction and save it."""
     if not (file.filename or "").lower().endswith(".csv"):
         raise HTTPException(400, "Please upload a .csv file")
 
@@ -68,9 +84,11 @@ def categorize_statement(file: UploadFile = File(...)):
         raise HTTPException(400, f"Too many transactions (max {MAX_TRANSACTIONS} per upload)")
 
     try:
-        results = categorize(transactions)
+        results, sources, sent_to_claude = categorize_with_memory(transactions)
     except anthropic.APIError:
         raise HTTPException(502, "Categorization service unavailable, please try again") from None
+    except DatabaseError:
+        raise HTTPException(502, "Database unavailable, please try again") from None
 
     rows = [
         CategorizedTransaction(
@@ -80,11 +98,29 @@ def categorize_statement(file: UploadFile = File(...)):
             merchant=r.merchant if r else None,
             category=r.category if r else None,
             confidence=r.confidence if r else None,
+            source=s,
         )
-        for t, r in zip(transactions, results)
+        for t, r, s in zip(transactions, results, sources)
     ]
+
+    try:
+        save_transactions([row.model_dump(mode="json") for row in rows])
+    except DatabaseError:
+        raise HTTPException(502, "Could not save transactions, please try again") from None
+
     return CategorizeResponse(
         transactions=rows,
         parse_errors=parse_errors,
         uncategorized=sum(r is None for r in results),
+        sent_to_claude=sent_to_claude,
+        from_memory=sources.count("memory"),
     )
+
+
+@app.get("/transactions", response_model=list[StoredTransaction])
+def get_transactions():
+    """Return all saved transactions, newest first. The dashboard reads from here."""
+    try:
+        return list_transactions()
+    except DatabaseError:
+        raise HTTPException(502, "Database unavailable, please try again") from None
