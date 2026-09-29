@@ -6,14 +6,15 @@ REMEMBER_THRESHOLD = 0.8  # only remember answers Claude was confident about
 
 
 def categorize_with_memory(
+    user_id: str,
     transactions: list[Transaction],
 ) -> tuple[list[CategorizationResult | None], list[str], int]:
-    """Categorize using merchant memory first, and Claude only for the rest.
+    """Categorize using this user's merchant memory first, and Claude only for the rest.
 
     Returns (results, sources, number_of_transactions_sent_to_claude).
     """
     keys = [description_key(t.description) for t in transactions]
-    memory = lookup_memory(keys)
+    memory = lookup_memory(user_id, keys)
 
     # Decide which transactions actually need Claude.
     # Repeats of the same unknown merchant in one upload are only asked once.
@@ -48,6 +49,6 @@ def categorize_with_memory(
         for i, r in answers.items()
         if r is not None and keys[i] and r.confidence >= REMEMBER_THRESHOLD
     }
-    save_memory(new_memory)
+    save_memory(user_id, new_memory)
 
     return results, sources, len(to_ask)

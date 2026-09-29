@@ -5,12 +5,13 @@ from pathlib import Path
 
 import anthropic
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from postgrest.exceptions import APIError as DatabaseError
 from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
 
 from app.amex_parser import parse_amex_csv
+from app.auth import current_user_id
 from app.db import (
     description_key,
     get_transaction,
@@ -30,6 +31,9 @@ MAX_UPLOAD_BYTES = 1_000_000  # 1 MB is far more than a year of statements
 MAX_TRANSACTIONS = 500        # caps API cost per upload
 
 app = FastAPI(title="Spending Insights API")
+
+# Only these websites may call the API from a browser.
+# Locally that's the Next.js dev server; on deploy we add the Vercel URL.
 ALLOWED_ORIGINS = os.getenv("FRONTEND_ORIGINS", "http://localhost:3000").split(",")
 
 app.add_middleware(
@@ -38,6 +42,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["*"],
 )
+
+
 class CategorizedTransaction(BaseModel):
     posted_date: date
     description: str
@@ -45,7 +51,7 @@ class CategorizedTransaction(BaseModel):
     merchant: str | None
     category: Category | None
     confidence: float | None
-    source: str  # "memory" or "llm"
+    source: str  # "memory", "llm", or "user"
 
 
 class CategorizeResponse(BaseModel):
@@ -67,15 +73,22 @@ class StoredTransaction(BaseModel):
     source: str
 
 
+class CategoryUpdate(BaseModel):
+    category: Category
+
+
 @app.get("/health")
 def health():
-    """Simple check that the server is running. Render will use this."""
+    """Simple check that the server is running. Render will use this. No login needed."""
     return {"status": "ok"}
 
 
 @app.post("/categorize", response_model=CategorizeResponse)
-def categorize_statement(file: UploadFile = File(...)):
-    """Upload an Amex CSV: categorize every transaction and save it."""
+def categorize_statement(
+    file: UploadFile = File(...),
+    user_id: str = Depends(current_user_id),
+):
+    """Upload an Amex CSV: categorize every transaction and save it for this user."""
     if not (file.filename or "").lower().endswith(".csv"):
         raise HTTPException(400, "Please upload a .csv file")
 
@@ -99,7 +112,7 @@ def categorize_statement(file: UploadFile = File(...)):
         raise HTTPException(400, f"Too many transactions (max {MAX_TRANSACTIONS} per upload)")
 
     try:
-        results, sources, sent_to_claude = categorize_with_memory(transactions)
+        results, sources, sent_to_claude = categorize_with_memory(user_id, transactions)
     except anthropic.APIError:
         raise HTTPException(502, "Categorization service unavailable, please try again") from None
     except DatabaseError:
@@ -119,7 +132,7 @@ def categorize_statement(file: UploadFile = File(...)):
     ]
 
     try:
-        save_transactions([row.model_dump(mode="json") for row in rows])
+        save_transactions(user_id, [row.model_dump(mode="json") for row in rows])
     except DatabaseError:
         raise HTTPException(502, "Could not save transactions, please try again") from None
 
@@ -133,31 +146,34 @@ def categorize_statement(file: UploadFile = File(...)):
 
 
 @app.get("/transactions", response_model=list[StoredTransaction])
-def get_transactions():
-    """Return all saved transactions, newest first. The dashboard reads from here."""
+def get_transactions(user_id: str = Depends(current_user_id)):
+    """Return this user's saved transactions, newest first."""
     try:
-        return list_transactions()
+        return list_transactions(user_id)
     except DatabaseError:
         raise HTTPException(502, "Database unavailable, please try again") from None
 
-class CategoryUpdate(BaseModel):
-    category: Category
-
 
 @app.patch("/transactions/{transaction_id}", response_model=StoredTransaction)
-def change_category(transaction_id: int, update: CategoryUpdate):
-    """Correct one transaction's category and teach merchant memory the correction."""
+def change_category(
+    transaction_id: int,
+    update: CategoryUpdate,
+    user_id: str = Depends(current_user_id),
+):
+    """Correct one of this user's transactions and teach their merchant memory."""
     try:
-        txn = get_transaction(transaction_id)
+        txn = get_transaction(user_id, transaction_id)
         if txn is None:
             raise HTTPException(404, "Transaction not found")
 
-        update_transaction_category(transaction_id, update.category.value)
+        update_transaction_category(user_id, transaction_id, update.category.value)
 
         key = description_key(txn["description"])
         if key:
-            save_user_correction(key, txn["merchant"] or txn["description"], update.category.value)
+            save_user_correction(
+                user_id, key, txn["merchant"] or txn["description"], update.category.value
+            )
 
-        return get_transaction(transaction_id)
+        return get_transaction(user_id, transaction_id)
     except DatabaseError:
         raise HTTPException(502, "Database unavailable, please try again") from None
