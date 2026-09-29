@@ -1,3 +1,4 @@
+import os
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -21,8 +22,14 @@ MAX_UPLOAD_BYTES = 1_000_000  # 1 MB is far more than a year of statements
 MAX_TRANSACTIONS = 500        # caps API cost per upload
 
 app = FastAPI(title="Spending Insights API")
+ALLOWED_ORIGINS = os.getenv("FRONTEND_ORIGINS", "http://localhost:3000").split(",")
 
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST", "PATCH"],
+    allow_headers=["*"],
+)
 class CategorizedTransaction(BaseModel):
     posted_date: date
     description: str
