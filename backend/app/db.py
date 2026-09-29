@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import datetime, timezone
 from functools import lru_cache
 
 from supabase import Client, create_client
@@ -70,3 +71,35 @@ def list_transactions(limit: int = 1000) -> list[dict]:
         .execute()
         .data
     )
+
+def get_transaction(transaction_id: int) -> dict | None:
+    rows = (
+        get_client()
+        .table("transactions")
+        .select("*")
+        .eq("id", transaction_id)
+        .limit(1)
+        .execute()
+        .data
+    )
+    return rows[0] if rows else None
+
+
+def update_transaction_category(transaction_id: int, category: str) -> None:
+    get_client().table("transactions").update(
+        {"category": category, "source": "user", "confidence": 1.0}
+    ).eq("id", transaction_id).execute()
+
+
+def save_user_correction(key: str, merchant: str, category: str) -> None:
+    """A human correction always wins: overwrite whatever memory had for this merchant."""
+    get_client().table("merchant_memory").upsert(
+        {
+            "description_key": key,
+            "merchant": merchant,
+            "category": category,
+            "source": "user",
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        },
+        on_conflict="description_key",
+    ).execute()

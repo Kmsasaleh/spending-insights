@@ -11,7 +11,14 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.amex_parser import parse_amex_csv
-from app.db import list_transactions, save_transactions
+from app.db import (
+    description_key,
+    get_transaction,
+    list_transactions,
+    save_transactions,
+    save_user_correction,
+    update_transaction_category,
+)
 from app.models import Category
 from app.service import categorize_with_memory
 
@@ -130,5 +137,27 @@ def get_transactions():
     """Return all saved transactions, newest first. The dashboard reads from here."""
     try:
         return list_transactions()
+    except DatabaseError:
+        raise HTTPException(502, "Database unavailable, please try again") from None
+
+class CategoryUpdate(BaseModel):
+    category: Category
+
+
+@app.patch("/transactions/{transaction_id}", response_model=StoredTransaction)
+def change_category(transaction_id: int, update: CategoryUpdate):
+    """Correct one transaction's category and teach merchant memory the correction."""
+    try:
+        txn = get_transaction(transaction_id)
+        if txn is None:
+            raise HTTPException(404, "Transaction not found")
+
+        update_transaction_category(transaction_id, update.category.value)
+
+        key = description_key(txn["description"])
+        if key:
+            save_user_correction(key, txn["merchant"] or txn["description"], update.category.value)
+
+        return get_transaction(transaction_id)
     except DatabaseError:
         raise HTTPException(502, "Database unavailable, please try again") from None
