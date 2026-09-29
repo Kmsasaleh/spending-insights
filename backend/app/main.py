@@ -29,6 +29,9 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 MAX_UPLOAD_BYTES = 1_000_000  # 1 MB is far more than a year of statements
 MAX_TRANSACTIONS = 500        # caps API cost per upload
+# Public demo accounts can look around and edit categories,
+# but can't upload statements (uploads spend Claude credits).
+DEMO_USER_IDS = {i.strip() for i in os.getenv("DEMO_USER_IDS", "").split(",") if i.strip()}
 
 app = FastAPI(title="Spending Insights API")
 
@@ -89,6 +92,8 @@ def categorize_statement(
     user_id: str = Depends(current_user_id),
 ):
     """Upload an Amex CSV: categorize every transaction and save it for this user."""
+    if user_id in DEMO_USER_IDS:
+         raise HTTPException(403, "The demo account is read-only, so uploads are turned off.")
     if not (file.filename or "").lower().endswith(".csv"):
         raise HTTPException(400, "Please upload a .csv file")
 
