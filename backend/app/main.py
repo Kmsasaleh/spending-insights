@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from postgrest.exceptions import APIError as DatabaseError
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.amex_parser import parse_amex_csv
 from app.db import list_transactions, save_transactions

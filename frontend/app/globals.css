@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #14213d;
+  --color-pine: #1b4d3e;
+  --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: #f5f7f9;
+  color: #14213d;
+}
