@@ -1,3 +1,4 @@
+import { supabase } from "./supabase";
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 // Must match the Category enum in backend/app/models.py.
@@ -28,12 +29,22 @@ export type CategorizeResponse = {
   from_memory: number;
 };
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, init);
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  // Attach the signed-in user's token so the API knows who's calling.
+  const { data } = await supabase.auth.getSession();
+  const headers = new Headers(init.headers);
+  if (data.session) headers.set("Authorization", `Bearer ${data.session.access_token}`);
+
+  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
+
+  if (res.status === 401) {
+    // Session expired or invalid: sign out locally, which returns the user to the sign-in screen.
+    await supabase.auth.signOut();
+  }
   if (!res.ok) {
     // FastAPI errors look like {"detail": "..."}
-    const data = await res.json().catch(() => null);
-    const detail = typeof data?.detail === "string" ? data.detail : `Request failed (${res.status})`;
+    const body = await res.json().catch(() => null);
+    const detail = typeof body?.detail === "string" ? body.detail : `Request failed (${res.status})`;
     throw new Error(detail);
   }
   return res.json();
