@@ -1,0 +1,10 @@
+{
+  "name": "spending-insights",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --names api,web --prefix-colors blue,green --kill-others \"cd backend && .venv/bin/uvicorn app.main:app --reload\" \"cd frontend && npm run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
