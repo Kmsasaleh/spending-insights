@@ -11,6 +11,7 @@ import {
   type StoredTransaction,
 } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
+import Dashboard from "@/components/Dashboard";
 
 const money = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" });
 
@@ -127,7 +128,7 @@ export default function SpendingApp({ email }: { email: string }) {
           {summary.sent_to_claude} {summary.sent_to_claude === 1 ? "was" : "were"} sent to Claude.
         </p>
       )}
-
+      {transactions.length > 0 && <Dashboard transactions={transactions} />}
       <section className="mt-10">
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-lg font-semibold text-ink">History</h2>
