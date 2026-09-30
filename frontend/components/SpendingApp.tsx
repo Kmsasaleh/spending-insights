@@ -90,7 +90,7 @@ export default function SpendingApp({ email }: { email: string }) {
         </div>
       </div>
       <p className="mt-2 max-w-prose text-slate-600">
-        Upload an Amex CSV export. Every transaction is categorized and saved to your history.
+        Upload a CSV export from your bank or credit card. Every transaction is categorized and saved to your history.
         Change any category below and future statements will follow your choice.
       </p>
 
@@ -143,7 +143,7 @@ export default function SpendingApp({ email }: { email: string }) {
           <p className="mt-4 text-sm text-slate-600">Loading your history…</p>
         ) : transactions.length === 0 ? (
           <p className="mt-4 text-sm text-slate-600">
-            No transactions yet. Upload your first Amex statement above to get started.
+            No transactions yet. Upload your first statement above to get started.
           </p>
         ) : (
           <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">

@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from postgrest.exceptions import APIError as DatabaseError
 from pydantic import BaseModel
 
-from app.amex_parser import parse_amex_csv
+from app.csv_parser import parse_statement_csv
 from app.auth import current_user_id
 from app.db import (
     description_key,
@@ -91,7 +91,7 @@ def categorize_statement(
     file: UploadFile = File(...),
     user_id: str = Depends(current_user_id),
 ):
-    """Upload an Amex CSV: categorize every transaction and save it for this user."""
+    """Upload a bank or card CSV: categorize every transaction and save it for this user."""
     if user_id in DEMO_USER_IDS:
          raise HTTPException(403, "The demo account is read-only, so uploads are turned off.")
     if not (file.filename or "").lower().endswith(".csv"):
@@ -107,7 +107,7 @@ def categorize_statement(
         raise HTTPException(400, "File is not valid text") from None
 
     try:
-        transactions, parse_errors = parse_amex_csv(content)
+            transactions, parse_errors = parse_statement_csv(content)
     except ValueError as e:
         raise HTTPException(400, str(e)) from None
 
