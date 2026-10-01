@@ -21,7 +21,7 @@ must agree, so accuracy measures the model, not a mismatch in definitions.
 Rules:
 - A refund gets the category of the original purchase.
 - Uber Eats is Dining; Uber rides are Transport, even when travelling.
-- When a store sells many kinds of things (e.g. a pharmacy), label by what it mostly sells.
+- Drugstore chains (e.g. Shoppers Drug Mart) are Shopping; prescriptions and medical care are Health.
 - Amazon Prime membership is Subscriptions; the card's annual membership fee is Bills & Utilities.
 - Credit card payments ("PAYMENT RECEIVED") are Transfers.
 - Parking (including McMaster parking and parking apps like Honk) is Transport.

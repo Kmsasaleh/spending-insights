@@ -31,7 +31,7 @@ LABELS = PRIVATE / "to_label.csv"
 CACHE = PRIVATE / "llm_predictions.json"
 RESULTS = EVAL_DIR / "RESULTS.md"         # committed: aggregate numbers only
 VALID = {c.value for c in Category}
-
+TEST_MONTHS = 3  # the most recent months are held out for the final number
 # Baseline: simple keyword rules, checked in order. First match wins.
 RULES = [
     ("Transfers", ["PAYMENT RECEIVED", "PAYMENT - THANK"]),
@@ -165,8 +165,16 @@ def main() -> None:
     n = len(rows)
     llm = llm_predictions(rows, refresh="--refresh" in sys.argv)
     claude = {k: (v["category"] if v else None) for k, v in llm.items()}
+    rules = {r.id: rules_predict(r.description) for r in rows}
     memory, memory_sent = simulate_memory(rows, llm, fixes=False)
     fixed, fixed_sent = simulate_memory(rows, llm, fixes=True)
+
+    # Hold out the most recent months. Prompt changes are decided by looking at
+    # the dev months only; the test months are only used to report the final number.
+    months = sorted({r.month for r in rows})
+    test_months = set(months[-TEST_MONTHS:])
+    dev = [r for r in rows if r.month not in test_months]
+    test = [r for r in rows if r.month in test_months]
 
     out: list[str] = []
 
@@ -176,42 +184,44 @@ def main() -> None:
 
     say("# Evaluation results")
     say()
-    say(f"- **Labelled transactions:** {n} ({rows[0].posted} to {rows[-1].posted}, "
-        f"{len({r.month for r in rows})} months)")
+    say(f"- **Labelled transactions:** {n} ({rows[0].posted} to {rows[-1].posted}, {len(months)} months)")
+    say(f"- **Dev set** (used to improve the prompt): {len(dev)} transactions, "
+        f"first {len(months) - TEST_MONTHS} months")
+    say(f"- **Test set** (held out, only for reporting): {len(test)} transactions, last {TEST_MONTHS} months")
     say(f"- **Model:** `{MODEL}`")
     say(f"- **Run:** {date.today()}")
     say()
-    say("| Method | Accuracy | Sent to Claude |")
-    say("|---|---|---|")
+    say("| Method | Dev accuracy | Test accuracy | Sent to Claude (all months) |")
+    say("|---|---|---|---|")
     for name, preds, sent in [
-        ("Keyword rules (baseline)", {r.id: rules_predict(r.description) for r in rows}, 0),
+        ("Keyword rules (baseline)", rules, 0),
         ("Claude", claude, n),
         ("Claude + merchant memory", memory, memory_sent),
         ("Claude + memory + monthly corrections", fixed, fixed_sent),
     ]:
-        say(f"| {name} | {accuracy(rows, preds):.1%} | {sent} ({sent / n:.0%}) |")
+        say(f"| {name} | {accuracy(dev, preds):.1%} | {accuracy(test, preds):.1%} | {sent} ({sent / n:.0%}) |")
 
     say()
-    say("## Claude accuracy by category")
+    say("## Claude accuracy by category (dev set)")
     say()
     say("| Category | Transactions | Accuracy |")
     say("|---|---|---|")
-    for category, count in Counter(r.true for r in rows).most_common():
-        group = [r for r in rows if r.true == category]
+    for category, count in Counter(r.true for r in dev).most_common():
+        group = [r for r in dev if r.true == category]
         say(f"| {category} | {count} | {accuracy(group, claude):.0%} |")
 
     say()
-    say("## Most common mistakes (true → predicted)")
+    say("## Most common mistakes on the dev set (true → predicted)")
     say()
-    mistakes = Counter((r.true, claude[r.id]) for r in rows if claude[r.id] != r.true)
+    mistakes = Counter((r.true, claude[r.id]) for r in dev if claude[r.id] != r.true)
     for (true, predicted), count in mistakes.most_common(8):
         say(f"- {true} → {predicted}: {count}")
 
     say()
-    say("## Is Claude's confidence meaningful?")
+    say("## Is Claude's confidence meaningful? (dev set)")
     say()
-    confident = [r for r in rows if llm[r.id] and llm[r.id]["confidence"] >= REMEMBER_THRESHOLD]
-    unsure = [r for r in rows if r not in confident]
+    confident = [r for r in dev if llm[r.id] and llm[r.id]["confidence"] >= REMEMBER_THRESHOLD]
+    unsure = [r for r in dev if r not in confident]
     if confident:
         say(f"- Confidence ≥ {REMEMBER_THRESHOLD}: {len(confident)} transactions, {accuracy(confident, claude):.0%} correct")
     if unsure:
@@ -220,9 +230,9 @@ def main() -> None:
     RESULTS.write_text("\n".join(out) + "\n")
     print(f"\nSaved summary to {RESULTS} (aggregate numbers only, safe to commit).")
 
-    # Individual mistakes include merchant names, so they're printed here only, never saved.
-    print("\nSample of Claude's mistakes (private, not saved):")
-    for r in [r for r in rows if claude[r.id] != r.true][:25]:
+    # Only dev-set mistakes are shown, so prompt changes are never based on the test months.
+    print("\nClaude's mistakes on the dev set (private, not saved):")
+    for r in [r for r in dev if claude[r.id] != r.true]:
         print(f"  {r.description[:45]:<45} true={r.true:<18} claude={claude[r.id]}")
 
 

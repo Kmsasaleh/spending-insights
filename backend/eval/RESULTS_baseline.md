@@ -9,37 +9,37 @@
 | Method | Dev accuracy | Test accuracy | Sent to Claude (all months) |
 |---|---|---|---|
 | Keyword rules (baseline) | 71.9% | 59.8% | 0 (0%) |
-| Claude | 91.9% | 80.4% | 587 (100%) |
-| Claude + merchant memory | 91.5% | 81.5% | 239 (41%) |
-| Claude + memory + monthly corrections | 93.9% | 85.9% | 236 (40%) |
+| Claude | 91.1% | 82.6% | 587 (100%) |
+| Claude + merchant memory | 91.5% | 84.8% | 239 (41%) |
+| Claude + memory + monthly corrections | 93.5% | 88.0% | 236 (40%) |
 
 ## Claude accuracy by category (dev set)
 
 | Category | Transactions | Accuracy |
 |---|---|---|
-| Dining | 154 | 95% |
+| Dining | 154 | 96% |
 | Shopping | 91 | 97% |
-| Groceries | 70 | 100% |
-| Transport | 58 | 98% |
-| Subscriptions | 48 | 98% |
-| Other | 31 | 23% |
+| Groceries | 70 | 99% |
+| Transport | 58 | 97% |
+| Subscriptions | 48 | 100% |
+| Other | 31 | 13% |
 | Transfers | 21 | 100% |
 | Entertainment | 10 | 70% |
-| Bills & Utilities | 9 | 100% |
-| Health | 3 | 100% |
+| Bills & Utilities | 9 | 89% |
+| Health | 3 | 67% |
 
 ## Most common mistakes on the dev set (true → predicted)
 
-- Other → Shopping: 9
-- Other → Dining: 6
-- Other → Health: 4
+- Other → Shopping: 8
+- Other → Dining: 5
 - Dining → Health: 4
-- Other → Subscriptions: 3
-- Dining → Shopping: 3
-- Entertainment → Health: 2
-- Other → Bills & Utilities: 2
+- Other → Subscriptions: 4
+- Other → Health: 4
+- Other → Entertainment: 3
+- Entertainment → Other: 2
+- Shopping → Subscriptions: 2
 
 ## Is Claude's confidence meaningful? (dev set)
 
-- Confidence ≥ 0.8: 471 transactions, 93% correct
-- Confidence < 0.8: 24 transactions, 67% correct
+- Confidence ≥ 0.8: 448 transactions, 93% correct
+- Confidence < 0.8: 47 transactions, 70% correct
