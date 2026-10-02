@@ -16,7 +16,6 @@ def categorize_with_memory(
     keys = [description_key(t.description) for t in transactions]
     memory = lookup_memory(user_id, keys)
 
-    # Decide which transactions actually need Claude.
     # Repeats of the same unknown merchant in one upload are only asked once.
     first_index: dict[str, int] = {}
     to_ask: list[int] = []
@@ -40,7 +39,7 @@ def categorize_with_memory(
         elif i in answers:
             results.append(answers[i])
             sources.append("llm")
-        else:  # a repeat of a merchant asked earlier in this same upload
+        else:
             results.append(answers.get(first_index[k]))
             sources.append("llm")
 

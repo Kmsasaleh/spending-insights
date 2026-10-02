@@ -30,7 +30,6 @@ export type CategorizeResponse = {
 };
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  // Attach the signed-in user's token so the API knows who's calling.
   const { data } = await supabase.auth.getSession();
   const headers = new Headers(init.headers);
   if (data.session) headers.set("Authorization", `Bearer ${data.session.access_token}`);

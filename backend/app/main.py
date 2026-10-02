@@ -54,7 +54,7 @@ class CategorizedTransaction(BaseModel):
     merchant: str | None
     category: Category | None
     confidence: float | None
-    source: str  # "memory", "llm", or "user"
+    source: str
 
 
 class CategorizeResponse(BaseModel):

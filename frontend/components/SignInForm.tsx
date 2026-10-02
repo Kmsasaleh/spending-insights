@@ -10,7 +10,7 @@ export default function SignInForm() {
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault(); // stop the browser from reloading the page
+    e.preventDefault();
     setBusy(true);
     setError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });

@@ -11,12 +11,10 @@ export default function Home() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // 1. Is someone already signed in (e.g. returning visitor)?
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setChecking(false);
     });
-    // 2. React to future sign-ins and sign-outs.
     const { data } = supabase.auth.onAuthStateChange((_event, newSession) => setSession(newSession));
     return () => data.subscription.unsubscribe();
   }, []);

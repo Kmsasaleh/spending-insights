@@ -29,7 +29,6 @@ def _clean(cell: str | None) -> str:
 
 
 def _normalize_date_text(text: str) -> str:
-    # "03 Sept. 2026" -> "03 Sep 2026"
     return text.strip().replace(".", "").replace("Sept", "Sep")
 
 
@@ -103,7 +102,7 @@ def parse_statement_csv(content: str) -> tuple[list[Transaction], list[str]]:
     try:
         dialect = csv.Sniffer().sniff(content[:4096], delimiters=",;\t")
     except csv.Error:
-        dialect = csv.excel  # plain commas
+        dialect = csv.excel
     rows = [r for r in csv.reader(io.StringIO(content), dialect) if any(c.strip() for c in r)]
     if not rows:
         raise ValueError("The file is empty")
@@ -116,7 +115,6 @@ def parse_statement_csv(content: str) -> tuple[list[Transaction], list[str]]:
     width = max(len(r) for r in data)
     columns = [[_clean(r[i]) if i < len(r) else "" for r in data] for i in range(width)]
 
-    # 1. Use the header names when there are any.
     headers = [_clean(h).lower() for h in rows[0]] if has_header else []
     date_col = _find(headers, DATE_NAMES)
     desc_col = _find(headers, DESCRIPTION_NAMES)
@@ -124,7 +122,6 @@ def parse_statement_csv(content: str) -> tuple[list[Transaction], list[str]]:
     debit_col = _find(headers, DEBIT_NAMES)
     credit_col = _find(headers, CREDIT_NAMES)
 
-    # 2. Fill in anything still unknown by looking at the data itself.
     if date_col is None:
         date_col = next((i for i, col in enumerate(columns) if _pick_date_format(col)), None)
     numeric = [i for i, col in enumerate(columns) if i != date_col and _mostly_amounts(col)]

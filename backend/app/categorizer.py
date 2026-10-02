@@ -92,9 +92,9 @@ def _ask_claude(transactions: list[Transaction]) -> dict[int, CategorizationResu
         try:
             i = ids.index(item["id"])
         except (KeyError, ValueError, TypeError):
-            continue  # unknown id
+            continue
         if i in found:
-            continue  # duplicate id: keep the first answer only
+            continue
         # Guard against answers shifted onto the wrong row: the echo must match this row.
         if _signature(item.get("echo", "")) != _signature(transactions[i].description):
             continue

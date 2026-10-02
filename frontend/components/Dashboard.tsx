@@ -16,7 +16,6 @@ export default function Dashboard({ transactions }: { transactions: StoredTransa
   const months = useMemo(() => spendingByMonth(transactions), [transactions]);
   const [picked, setPicked] = useState<string | null>(null);
 
-  // Default to the most recent month; fall back if the picked month disappears.
   const current = months.find((m) => m.month === picked) ?? months.at(-1);
   const categories = useMemo(
     () => (current ? spendingByCategory(transactions, current.month) : []),

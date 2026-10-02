@@ -34,10 +34,10 @@ def test_known_merchants_skip_claude_and_repeats_are_asked_once(monkeypatch, mak
     results, sources, asked = service.categorize_with_memory("user-1", txns)
 
     assert sources == ["memory", "llm", "llm"]
-    assert asked == 1                        # two Shell rows, one question
+    assert asked == 1
     assert sent == ["SHELL C11318"]
     assert [r.category.value for r in results] == ["Dining", "Transport", "Transport"]
-    assert list(saved) == ["SHELL C"]        # the confident new answer is remembered
+    assert list(saved) == ["SHELL C"]
 
 
 def test_unsure_answers_are_not_remembered(monkeypatch, make_txns):

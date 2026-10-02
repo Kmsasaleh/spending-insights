@@ -26,12 +26,11 @@ class Transaction(BaseModel):
     posted_date: date
     description: str = Field(min_length=1, max_length=500)
     amount: Decimal = Field(decimal_places=2)  # negative = money out, positive = money in
-    category: Category | None = None           # None until categorized
+    category: Category | None = None
 
     @field_validator("description")
     @classmethod
     def clean_description(cls, v: str) -> str:
-        # Collapse messy whitespace: "  SQ *TIM   HORTONS " -> "SQ *TIM HORTONS"
         cleaned = " ".join(v.split())
         if not cleaned:
             raise ValueError("description cannot be blank")
@@ -40,6 +39,6 @@ class Transaction(BaseModel):
 
 class CategorizationResult(BaseModel):
     """What we require the LLM to return for each transaction."""
-    merchant: str = Field(min_length=1, max_length=100)  # cleaned name, e.g. "Tim Hortons"
+    merchant: str = Field(min_length=1, max_length=100)
     category: Category
     confidence: float = Field(ge=0.0, le=1.0)

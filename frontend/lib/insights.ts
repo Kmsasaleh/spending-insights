@@ -22,7 +22,7 @@ export function spendingByMonth(transactions: StoredTransaction[]): MonthTotal[]
   const totals = new Map<string, number>();
   for (const t of transactions) {
     if (NOT_SPENDING.includes(t.category)) continue;
-    const month = t.posted_date.slice(0, 7); // "2026-09-25" -> "2026-09"
+    const month = t.posted_date.slice(0, 7);
     // Purchases are negative, so subtracting adds them; refunds (positive) reduce the total.
     totals.set(month, (totals.get(month) ?? 0) - toCents(t.amount));
   }

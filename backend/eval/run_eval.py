@@ -32,7 +32,6 @@ CACHE = PRIVATE / "llm_predictions.json"
 RESULTS = EVAL_DIR / "RESULTS.md"         # committed: aggregate numbers only
 VALID = {c.value for c in Category}
 TEST_MONTHS = 3  # the most recent months are held out for the final number
-# Baseline: simple keyword rules, checked in order. First match wins.
 RULES = [
     ("Transfers", ["PAYMENT RECEIVED", "PAYMENT - THANK"]),
     ("Subscriptions", ["NETFLIX", "SPOTIFY", "APPLE.COM/BILL", "OPENAI", "CHATGPT",
@@ -130,7 +129,7 @@ def simulate_memory(rows: list[Row], llm: dict, fixes: bool) -> tuple[dict, int]
     sent = 0
     for month in sorted({r.month for r in rows}):
         batch = [r for r in rows if r.month == month]
-        asked: dict[str, tuple[str | None, float]] = {}  # repeats in one upload are sent once
+        asked: dict[str, tuple[str | None, float]] = {}
         for r in batch:
             key = description_key(r.description)
             if key in memory:
@@ -143,11 +142,9 @@ def simulate_memory(rows: list[Row], llm: dict, fixes: bool) -> tuple[dict, int]
                 sent += 1
                 if key:
                     asked[key] = (preds[r.id], p["confidence"] if p else 0.0)
-        # After the upload: confident answers are remembered automatically...
         for key, (category, confidence) in asked.items():
             if category and confidence >= REMEMBER_THRESHOLD and key not in memory:
                 memory[key] = category
-        # ...and corrections override them.
         if fixes:
             for r in batch:
                 key = description_key(r.description)

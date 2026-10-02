@@ -64,25 +64,33 @@ flowchart LR
 
 ## Run it locally
 
+<details>
+<summary>Setup instructions</summary>
+
 Requirements: Python 3.14, Node 24, a Supabase project, an Anthropic API key.
+
+1. Copy `.env.example` to `.env` and fill in `ANTHROPIC_API_KEY`, `SUPABASE_URL` and `SUPABASE_KEY`.
+2. Create `frontend/.env.local` with `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+3. Install everything and start the app:
 
 ```bash
 git clone https://github.com/Kmsasaleh/spending-insights.git
 cd spending-insights
-
-cp .env.example .env                      # add ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_KEY
+cp .env.example .env
 cd backend && python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt && cd ..
-cd frontend && npm install && cd ..       # plus frontend/.env.local (see below)
+cd frontend && npm install && cd ..
 npm install
-
-npm run dev                               # starts backend (8000) and frontend (3000) together
+npm run dev
 ```
 
-`frontend/.env.local` needs `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+The backend runs on port 8000 and the frontend on port 3000.
 
 **Tests:** `cd backend && pytest` (22 tests, no network or API keys needed).
+
 **Evaluation:** label your own transactions with `python -m eval.make_label_sheet <csv files>`, then run `python -m eval.run_eval`.
+
+</details>
 
 ## Limitations and next steps
 

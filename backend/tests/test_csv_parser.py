@@ -21,12 +21,9 @@ def test_amex_export_purchases_become_negative():
 @pytest.mark.parametrize(
     "content",
     [
-        # No header; debit, credit and balance columns
         "08/03/2026,TIM HORTONS #1234,4.87,,1203.50\n08/04/2026,PAYROLL DEPOSIT,,1500.00,2703.50\n",
-        # Withdrawals / Deposits columns
         "Posted Date,Description,Withdrawals,Deposits\n"
         "2026-08-03,TIM HORTONS #1234,4.87,\n2026-08-04,PAYROLL DEPOSIT,,1500.00\n",
-        # Semicolons, one signed Amount column
         "Date;Payee;Amount\n2026-08-03;TIM HORTONS #1234;-4.87\n2026-08-04;PAYROLL DEPOSIT;1500.00\n",
     ],
 )

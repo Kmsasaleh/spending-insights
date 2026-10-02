@@ -35,7 +35,6 @@ export default function SpendingApp({ email }: { email: string }) {
   const [summary, setSummary] = useState<CategorizeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Load this user's saved history once, when the app first appears.
   useEffect(() => {
     getTransactions()
       .then(setTransactions)
@@ -61,7 +60,6 @@ export default function SpendingApp({ email }: { email: string }) {
 
   async function handleCategoryChange(id: number, category: Category) {
     const previous = transactions;
-    // Show the change immediately, then confirm with the server.
     setTransactions((ts) =>
       ts.map((t) => (t.id === id ? { ...t, category, source: "user", confidence: 1 } : t))
     );
@@ -69,7 +67,7 @@ export default function SpendingApp({ email }: { email: string }) {
       const saved = await updateCategory(id, category);
       setTransactions((ts) => ts.map((t) => (t.id === id ? saved : t)));
     } catch (e) {
-      setTransactions(previous); // undo the change if saving failed
+      setTransactions(previous);
       setError(`That change wasn't saved. ${describeError(e)}`);
     }
   }
