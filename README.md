@@ -54,13 +54,14 @@ flowchart LR
 ## Engineering decisions
 
 - **Exact money:** `Decimal` in Python, `numeric(12,2)` in Postgres, integer cents in the dashboard. Never floats.
-- **Security:** Supabase Auth; the API derives the user only from a verified token and scopes every query to that user; another user's transaction returns 404, not 403. Row Level Security blocks the public database API. Secret keys live only on the server.
+- **Security:** Supabase Auth; the API derives the user only from a verified token and scopes every query to that user; another user's transaction returns 404, not 403. Row Level Security policies let a signed-in user read only their own rows through the database API, and block all writes from the browser. Secret keys live only on the server.
+- **Analytics in SQL:** dashboard totals, month-over-month change, running totals and top merchants are PostgreSQL views (CTEs, window functions, a `generate_series` month spine), read straight from the browser and scoped by RLS. See [`sql/`](sql/README.md); CI tests them against Postgres 17.
 - **Cost controls:** public sign-ups are off, the demo account is read-only, uploads are capped at 1 MB / 500 transactions, and the API account is prepaid with a spending limit.
 - **Reliability:** an evaluation run exposed answers occasionally attaching to the wrong row within a batch. Ids plus an echo check plus a retry fixed it, and a regression test keeps it fixed.
 
 ## Tech stack
 
-**Frontend:** Next.js, TypeScript, Tailwind CSS, Recharts · **Backend:** Python, FastAPI, Pydantic · **Data:** PostgreSQL (Supabase), Supabase Auth · **AI:** Claude Haiku via the Anthropic API · **Testing:** pytest, GitHub Actions (tests, ESLint, TypeScript) · **Hosting:** Vercel, Render
+**Frontend:** Next.js, TypeScript, Tailwind CSS, Recharts · **Backend:** Python, FastAPI, Pydantic · **Data:** PostgreSQL (Supabase): views, window functions, Row Level Security; Supabase Auth · **AI:** Claude Haiku via the Anthropic API · **Testing:** pytest, SQL assertion tests, GitHub Actions (tests, ESLint, TypeScript) · **Hosting:** Vercel, Render
 
 ## Run it locally
 

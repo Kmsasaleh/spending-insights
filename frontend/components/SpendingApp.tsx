@@ -34,6 +34,8 @@ export default function SpendingApp({ email }: { email: string }) {
   const [uploading, setUploading] = useState(false);
   const [summary, setSummary] = useState<CategorizeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bumped after any change to transactions so the dashboard re-reads its views.
+  const [dataVersion, setDataVersion] = useState(0);
 
   useEffect(() => {
     getTransactions()
@@ -49,6 +51,7 @@ export default function SpendingApp({ email }: { email: string }) {
     try {
       setSummary(await uploadStatement(file));
       setTransactions(await getTransactions());
+      setDataVersion((v) => v + 1);
       setFile(null);
       setInputKey((k) => k + 1); // clears the file picker so the same file isn't uploaded twice
     } catch (e) {
@@ -66,6 +69,7 @@ export default function SpendingApp({ email }: { email: string }) {
     try {
       const saved = await updateCategory(id, category);
       setTransactions((ts) => ts.map((t) => (t.id === id ? saved : t)));
+      setDataVersion((v) => v + 1);
     } catch (e) {
       setTransactions(previous);
       setError(`That change wasn't saved. ${describeError(e)}`);
@@ -126,7 +130,7 @@ export default function SpendingApp({ email }: { email: string }) {
           {summary.sent_to_claude} {summary.sent_to_claude === 1 ? "was" : "were"} sent to Claude.
         </p>
       )}
-      {transactions.length > 0 && <Dashboard transactions={transactions} />}
+      {transactions.length > 0 && <Dashboard dataVersion={dataVersion} />}
       <section className="mt-10">
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-lg font-semibold text-ink">History</h2>
